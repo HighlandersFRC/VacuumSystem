@@ -11,7 +11,7 @@ This repository contains python scripts designed to run on a RaspberryPi to cont
 
 ## Compatibility
 1. These instructions were verified with the following configurations:
-   1. Raspberry PI Model 2B, Raspian OS Version: **9.4 (stretch)**
+   1. Raspberry PI 2 Model B, Raspian OS Version: **9.4 (stretch)**
       - Linux raspberrypi 4.14.62-v7+ #1134 SMP Tue Aug 14 17:10:10 BST 2018 armv7l GNU/Linux
 
 
@@ -64,9 +64,10 @@ This repository contains python scripts designed to run on a RaspberryPi to cont
 
 ## Basic Raspberry PI How-To:
 1. [Check Hardware version](https://elinux.org/RPi_HardwareHistory)
+   - cat /proc/cpuinfo
+1. [Check Raspian OS version](https://www.meccanismocomplesso.org/en/how-to-raspberry-checking-raspbian-version-update-upgrade/)
    - cat /etc/os-release
    - lsb_release -a
    - uname -a
-1. [Check Raspian OS version](https://www.meccanismocomplesso.org/en/how-to-raspberry-checking-raspbian-version-update-upgrade/)
 1. [Configure static IP on the PI for wired, eth0](https://www.raspberrypi.org/forums/viewtopic.php?t=191140)
 
