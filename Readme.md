@@ -18,15 +18,30 @@ This repository contains python scripts designed to run on a RaspberryPi to cont
 
 ## Configuration Instructions
 1. Raspberry PI Configuration
+   1. Update PI OS
+      1. sudo apt-get update
+      1. sudo apt-get upgrade
+      1. sudo apt-get autoremove
+      1. sudo reboot
+
+   1. Install Development Packages
+      1. sudo apt-get install -y git build-essential python-dev
+      1. sudo apt-get install -y python-smbus python-imaging
+      1. sudo apt-get install -y git python-pip python-pil
+      1. sudo apt-get install -y i2c-tools python-smbus
+
    1. Install Adafruit packages on the Raspberry PI
-      1. [MJPG Instructions](https://github.com/cncjs/cncjs/wiki/Setup-Guide:-Raspberry-Pi-%7C-MJPEG-Streamer-Install-&-Setup-&-FFMpeg-Recording)
-      1. To enable future customization of individual camera streams the a separate copy of the www directory is created for 3 streams.
-         1. **sudo cp /usr/local/share/mjpg-streamer/www /home/pi/www_0**
-         1. **sudo cp /usr/local/share/mjpg-streamer/www /home/pi/www_1**
-         1. **sudo cp /usr/local/share/mjpg-streamer/www /home/pi/www_2**
-         1. **sudo chown -R pi:pi /home/pi/www_0**
-         1. **sudo chown -R pi:pi /home/pi/www_1**
-         1. **sudo chown -R pi:pi /home/pi/www_2**
+      1. Suggested directory for Adafruit tools:
+         1. **cd**
+         1. **mkdir adafruit**
+         1. **cd adafruit**
+
+     1. [Adafruit LED Backpack](https://learn.adafruit.com/adafruit-led-backpack/0-dot-56-seven-segment-backpack)
+        [Adafruit Python LED](https://learn.adafruit.com/matrix-7-segment-led-backpack-with-the-raspberry-pi?view=all)
+        [Adafruit Tutorial](https://learn.adafruit.com/adafruit-led-backpack)
+         1. **git clone https://github.com/adafruit/Adafruit_Python_LED_Backpack.git**
+         1. **cd Adafruit_Python_LED_Backpack/**
+            1. **sudo python setup.py install** Run again if errors. Reboot and re-run if that doesn't work.
 
    1. Configure Crontab to start automatic vacuum control upon reboot
       1. See file: **/var/spool/cron/crontabs/pi**
