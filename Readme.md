@@ -11,16 +11,16 @@ This repository contains python scripts designed to run on a RaspberryPi to cont
 
 ## Compatibility
 1. These instructions were verified with the following configurations:
-   1. Raspberry PI Model 2B, Raspian OS Version: **8 (stretch)**
-   1. Raspberry PI Model 3B, Raspian OS Version: **8 (stretch)**
-   1. Raspberry PI Model 3B, (unknown Raspian)
+   1. Raspberry PI Model 2B, Raspian OS Version: **9.4 (stretch)**
+      - Linux raspberrypi 4.14.62-v7+ #1134 SMP Tue Aug 14 17:10:10 BST 2018 armv7l GNU/Linux
 
 
 ## Configuration Instructions
 1. Raspberry PI Configuration
    1. Update PI OS
+      Note: [Upgrade Options](https://askubuntu.com/questions/81585/what-is-dist-upgrade-and-why-does-it-upgrade-more-than-upgrade)
       1. sudo apt-get update
-      1. sudo apt-get upgrade
+      1. sudo apt-get dist-upgrade
       1. sudo apt-get autoremove
       1. sudo reboot
 
@@ -31,10 +31,17 @@ This repository contains python scripts designed to run on a RaspberryPi to cont
       1. sudo apt-get install -y i2c-tools python-smbus
 
    1. Install Adafruit packages on the Raspberry PI
+      Note: Older Adafruit github repo conatined all packages in one repo. There are now separate repos for each product.
+
       1. Suggested directory for Adafruit tools:
          1. **cd**
          1. **mkdir adafruit**
          1. **cd adafruit**
+
+     1. [Adafruit LED Backpack](https://learn.adafruit.com/adafruit-led-backpack/0-dot-56-seven-segment-backpack)
+         1. **git clone https://github.com/adafruit/Adafruit_Python_ADS1x15.git**
+         1. **cd Adafruit_Python_LED_ADS1x15/**
+            1. **sudo python setup.py install** Run again if errors. Reboot and re-run if that doesn't work.
 
      1. [Adafruit LED Backpack](https://learn.adafruit.com/adafruit-led-backpack/0-dot-56-seven-segment-backpack)
         [Adafruit Python LED](https://learn.adafruit.com/matrix-7-segment-led-backpack-with-the-raspberry-pi?view=all)
@@ -57,6 +64,9 @@ This repository contains python scripts designed to run on a RaspberryPi to cont
 
 ## Basic Raspberry PI How-To:
 1. [Check Hardware version](https://elinux.org/RPi_HardwareHistory)
+   - cat /etc/os-release
+   - lsb_release -a
+   - uname -a
 1. [Check Raspian OS version](https://www.meccanismocomplesso.org/en/how-to-raspberry-checking-raspbian-version-update-upgrade/)
 1. [Configure static IP on the PI for wired, eth0](https://www.raspberrypi.org/forums/viewtopic.php?t=191140)
 
