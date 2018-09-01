@@ -36,8 +36,10 @@ MY_SMTP_USER = 'me'
 MY_SMTP_PASS = 'em'
 
 # GPIO pin assignments for the two valves
-vacuum_valve   = 7  # GREEN
-pressure_valve = 11 # GREY 
+GPIO_VAC_SOLENOID   = 7  # GREEN
+GPIO_PRESSURE_VALVE = 11 # GREY 
+GPIO_QUIT = 18 
+GPIO_SHUTDOWN = 16 
 
 keep_vacuum = True
 
@@ -68,15 +70,18 @@ def my_shutdown (channel) :
 
 # Set up gpio for button
 def enableButton () :
-    print ("Enable shutdown button: 24")
+    print ("Enable shutdown button. GPIO = ${0}", GPIO_SHUTDOWN)
+    print ("Enable quit button. GPIO = ${0}", GPIO_QUIT)
 
-    gpio_shutdown = 18
     GPIO.setwarnings ( False )
     GPIO.setmode ( GPIO.BOARD )
-    GPIO.setup ( gpio_shutdown, GPIO.IN, pull_up_down=GPIO.PUD_UP )
-    #GPIO.add_event_detect( gpio_shutdown, GPIO.FALLING, callback=my_shutdown)
+    GPIO.setup ( GPIO_QUIT, GPIO.IN, pull_up_down=GPIO.PUD_UP )
+    GPIO.setup ( GPIO_SHUTDOWN, GPIO.IN, pull_up_down=GPIO.PUD_UP )
+
     #GPIO.add_event_detect( gpio_shutdown, GPIO.FALLING, callback=turn_off_vacuum)
-    GPIO.add_event_detect( gpio_shutdown, GPIO.FALLING, callback=my_quit)
+
+    GPIO.add_event_detect( GPIO_SHUTDOWN, GPIO.FALLING, callback=my_shutdown)
+    GPIO.add_event_detect( GPIO_QUIT, GPIO.FALLING, callback=my_quit)
 
 def showPSI(psi):
     global segment
@@ -136,8 +141,8 @@ def set_gpio_defaults () :
 
     GPIO.setmode ( GPIO.BOARD )  ## Use BOARD pin numbering
 
-    GPIO.setup ( vacuum_valve,   GPIO.OUT ) ## Setup GPIO pin vac valve to OUT
-    GPIO.setup ( pressure_valve, GPIO.OUT ) ## Setup GPIO pin pressure valve to OUT
+    GPIO.setup ( GPIO_VAC_SOLENOID,   GPIO.OUT ) ## Setup GPIO pin vac valve to OUT
+    GPIO.setup ( GPIO_PRESSURE_VALVE, GPIO.OUT ) ## Setup GPIO pin pressure valve to OUT
 
     vac_on = 1 
 
@@ -176,14 +181,14 @@ def turn_on_vacuum ():
     print "DEBUG: turn vacuum on"
 
     # open pressure valve which turns on venturi.
-    GPIO.output ( pressure_valve, True ) 
+    GPIO.output ( GPIO_PRESSURE_VALVE, True ) 
 
     # pause one second for vacuum to build before opening path to
     # vacuum bag.
     time.sleep ( valve_delay_open_sec )
 
     # Open valve to vacuum bag.
-    GPIO.output ( vacuum_valve, True ) 
+    GPIO.output ( GPIO_VAC_SOLENOID, True ) 
 	
 # END turn_on_vacuum ()
 
@@ -204,14 +209,14 @@ def turn_off_vacuum ():
     print "DEBUG: turn vacuum off"
 
     # Close valve to isolate vacuum in vacuum bag.
-    GPIO.output ( vacuum_valve,  False )
+    GPIO.output ( GPIO_VAC_SOLENOID,  False )
 
     # pause to allow valve to vacuum bag to completely close before turning
     # off venturi.
     time.sleep ( valve_delay_close_sec )
 
     # Close pressure valve which turns off venturi to save air.
-    GPIO.output ( pressure_valve, False ) 
+    GPIO.output ( GPIO_PRESSURE_VALVE, False ) 
 	
 # END turn_off_vacuum ()
 
