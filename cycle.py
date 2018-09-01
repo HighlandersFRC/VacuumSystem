@@ -7,6 +7,7 @@ import smtplib          ## for sending email
 import os               ## for invoking shell commands
 from subprocess import Popen,PIPE       ## to get stdout from cmd
 import subprocess       ## to get stdout from cmd
+from Adafruit_LED_Backpack import SevenSegment 
 
 # File name to read for new vacuum off time
 voff_file = '/home/pi/gpio/voff_time.txt'
@@ -18,16 +19,17 @@ valve_delay_open_sec  = 0.10
 valve_delay_close_sec = 0.1
 VAC_SENSE_POLL_FREQ_SEC = 2.5    # Polling frequency when sensing vacuum
 vac_volts             = 0.69    # Voltage from vac sensor, default for no vacuum
-VAC_V_MIN             = 0.11    # Voltage from vac sensor: vacuum is too low so turn on vacuum
+VAC_V_MIN             = 0.00    # Voltage from vac sensor: vacuum is too low so turn on vacuum
 VAC_V_MAX             = 0.05    # Voltage from vac sensor: vacuum max setting so turn off vacuum
 VAC_V_PER_PSI         = 0.05    # Voltage from vac sensor: volts per PSI
 VAC_V_0               = 0.70    # Voltage from vac sensor: volts at atmospheric
 
 # Sides and back for robot cart: 12/11/2016
 VAC_V_MAX             = 0.05    # Voltage from vac sensor: vacuum max setting so turn off vacuum
-VAC_V_MIN             = 0.20    # Voltage from vac sensor: vacuum is too low so turn on vacuum
+VAC_V_MIN             = 0.00    # Voltage from vac sensor: vacuum is too low so turn on vacuum
 
-READ_VAC_VOLTS_CMD = "/home/pi/gpio/Adafruit-Raspberry-Pi-Python-Code/Adafruit_ADS1x15/ads1x15_ex_singleended.py"
+#READ_VAC_VOLTS_CMD = "/home/pi/adafruit/Adafruit-Raspberry-Pi-Python-Code/Adafruit_ADS1x15/ads1x15_ex_singleended.py"
+READ_VAC_VOLTS_CMD = "/home/pi/vac/original/gpio/Adafruit-Raspberry-Pi-Python-Code/Adafruit_ADS1x15/ads1x15_ex_singleended.py"
 
 MY_SMTP_SERVER = 'smtp.mine.com:587'
 MY_SMTP_USER = 'me'
@@ -36,6 +38,71 @@ MY_SMTP_PASS = 'em'
 # GPIO pin assignments for the two valves
 vacuum_valve   = 7  # GREEN
 pressure_valve = 11 # GREY 
+
+keep_vacuum = True
+
+fon = False
+
+
+# My callback for GPIO button press
+def my_quit (channel) :
+    global keep_vacuum
+    global time_stamp
+
+    time_now = time.time()
+    if ((time_now - time_stamp) >= 1) :
+        print ("Hit shutdown button: ${0}", channel)
+        turn_off_vacuum ()
+        keep_vacuum = False
+    time_stamp = time_now
+
+# My callback for GPIO button press
+def my_shutdown (channel) :
+    global time_stamp
+    time_now = time.time()
+    if ((time_now - time_stamp) >= 1) :
+        print ("Hit shutdown button: ${0}", channel)
+        os.system("sudo shutdown -h now")
+        #os.system("ls -l")
+    time_stamp = time_now
+
+# Set up gpio for button
+def enableButton () :
+    print ("Enable shutdown button: 24")
+
+    gpio_shutdown = 18
+    GPIO.setwarnings ( False )
+    GPIO.setmode ( GPIO.BOARD )
+    GPIO.setup ( gpio_shutdown, GPIO.IN, pull_up_down=GPIO.PUD_UP )
+    #GPIO.add_event_detect( gpio_shutdown, GPIO.FALLING, callback=my_shutdown)
+    #GPIO.add_event_detect( gpio_shutdown, GPIO.FALLING, callback=turn_off_vacuum)
+    GPIO.add_event_detect( gpio_shutdown, GPIO.FALLING, callback=my_quit)
+
+def showPSI(psi):
+    global segment
+    global fon
+    segment.clear()
+
+    # Set hours
+    #segment.set_digit(0, int(psi / 10))
+    #segment.set_digit(0, 2)     # Tens
+    #segment.set_digit(0, psi%10)     # Tens
+
+    segment.set_digit(0, int(psi/10)) 
+    segment.set_digit(1, int(psi % 10))
+
+    # Toggle colon
+    if (fon):
+        fon = False
+        #segment.set_colon(0)              # Toggle colon at 1Hz
+    else:
+        fon = True
+        #segment.set_colon(1)              # Toggle colon at 1Hz
+
+    # Write the display buffer to the hardware.  This must be called to
+    # update the actual display LEDs.
+    segment.write_display()
+    
 
 
 ############################################################################
@@ -50,7 +117,10 @@ def get_vac_volts () :
 	
     # Read standard out from process [0]. Stderr is [1].
     vac_volts = float(p1.communicate()[0])
-    print "Vacuum PSI: ", round( vac_volts_to_psi(vac_volts), 2), "Volts: ", round( vac_volts, 2)
+    psi = round( vac_volts_to_psi(vac_volts), 2)
+    psi = abs(psi)
+    print "Vacuum PSI: ", psi, "Volts: ", round( vac_volts, 2)
+    showPSI(psi)
 
 # END get_vac_volts ()
 
@@ -223,6 +293,7 @@ def regulate_vacuum_sense ():
 
     global vac_volts
     global vac_on
+    global keep_vacuum
 
     set_gpio_defaults ()
 
@@ -230,7 +301,7 @@ def regulate_vacuum_sense ():
 	
     print "Regulating vacuum: psi = ", vac_volts_to_psi (vac_volts), ", volts = ", vac_volts
 
-    while True :
+    while keep_vacuum :
 	
         get_vac_volts ()
 
@@ -263,6 +334,7 @@ def regulate_vacuum_time ():
 
     global vacuum_on_time_sec
     global vacuum_off_time_sec
+    global keep_vacuum
 
     set_gpio_defaults ()
 
@@ -272,7 +344,7 @@ def regulate_vacuum_time ():
     print "Regulating vacuum by time: vacuum on time = ", vacuum_on_time_sec, \
         ", vacuum off time = ", vacuum_off_time_sec
 
-    while True :
+    while keep_vacuum :
 
         # Print cycle count every 10 iterations
         if ( ( cycle_count % 10 ) == 0 ) :
@@ -319,6 +391,13 @@ def regulate_vacuum_time ():
 #
 # Invoke main program        
 #
+time_stamp = time.time()
+enableButton()
+segment = SevenSegment.SevenSegment(address=0x70)
+
+# Initialize the display. Must be called once before using the display.
+segment.begin()
+
 regulate_vacuum_sense ()
 #regulate_vacuum_time ()
 #set_gpio_defaults_and_exit ()
