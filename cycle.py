@@ -15,9 +15,9 @@ von_file  = '/home/pi/gpio/von_time.txt'
 vac_on    = 0
 vacuum_on_time_sec    = 30
 vacuum_off_time_sec   = 5 
-valve_delay_open_sec  = 0.10
+valve_delay_open_sec  = 1  #0.50
 valve_delay_close_sec = 0.1
-VAC_SENSE_POLL_FREQ_SEC = 2.5    # Polling frequency when sensing vacuum
+VAC_SENSE_POLL_FREQ_SEC = 2    # Polling frequency when sensing vacuum
 vac_volts             = 0.69    # Voltage from vac sensor, default for no vacuum
 VAC_V_MIN             = 0.00    # Voltage from vac sensor: vacuum is too low so turn on vacuum
 VAC_V_MAX             = 0.05    # Voltage from vac sensor: vacuum max setting so turn off vacuum
@@ -25,8 +25,8 @@ VAC_V_PER_PSI         = 0.05    # Voltage from vac sensor: volts per PSI
 VAC_V_0               = 0.70    # Voltage from vac sensor: volts at atmospheric
 
 # Sides and back for robot cart: 12/11/2016
-VAC_V_MAX             = 0.05    # Voltage from vac sensor: vacuum max setting so turn off vacuum
-VAC_V_MIN             = 0.00    # Voltage from vac sensor: vacuum is too low so turn on vacuum
+VAC_V_MAX             = 0.1    # Voltage from vac sensor: vacuum max setting so turn off vacuum
+VAC_V_MIN             = 0.2    # Voltage from vac sensor: vacuum is too low so turn on vacuum
 
 #READ_VAC_VOLTS_CMD = "/home/pi/adafruit/Adafruit-Raspberry-Pi-Python-Code/Adafruit_ADS1x15/ads1x15_ex_singleended.py"
 READ_VAC_VOLTS_CMD = "/home/pi/vac/original/gpio/Adafruit-Raspberry-Pi-Python-Code/Adafruit_ADS1x15/ads1x15_ex_singleended.py"
@@ -36,8 +36,8 @@ MY_SMTP_USER = 'me'
 MY_SMTP_PASS = 'em'
 
 # GPIO pin assignments for the two valves
-GPIO_VAC_SOLENOID   = 7  # GREEN
-GPIO_PRESSURE_VALVE = 11 # GREY 
+GPIO_VAC_SOLENOID   = 11  # GREEN
+GPIO_PRESSURE_VALVE = 7 # GREY 
 GPIO_QUIT = 18 
 GPIO_SHUTDOWN = 16 
 
@@ -71,7 +71,7 @@ def my_shutdown (channel) :
 # Set up gpio for button
 def enableButton () :
     print ("Enable shutdown button. GPIO = ${0}", GPIO_SHUTDOWN)
-    print ("Enable quit button. GPIO = ${0}", GPIO_QUIT)
+    #print ("Enable quit button. GPIO = ${0}", GPIO_QUIT)
 
     GPIO.setwarnings ( False )
     GPIO.setmode ( GPIO.BOARD )
