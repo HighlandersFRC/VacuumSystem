@@ -25,8 +25,8 @@ VAC_V_PER_PSI         = 0.05    # Voltage from vac sensor: volts per PSI
 VAC_V_0               = 0.70    # Voltage from vac sensor: volts at atmospheric
 
 # Sides and back for robot cart: 12/11/2016
-VAC_V_MAX             = 0.1    # Voltage from vac sensor: vacuum max setting so turn off vacuum
-VAC_V_MIN             = 0.2    # Voltage from vac sensor: vacuum is too low so turn on vacuum
+VAC_V_MAX             = 0.1   # Voltage from vac sensor: vacuum max setting so turn off vacuum
+VAC_V_MIN             = 0.15    # Voltage from vac sensor: vacuum is too low so turn on vacuum
 
 #READ_VAC_VOLTS_CMD = "/home/pi/adafruit/Adafruit-Raspberry-Pi-Python-Code/Adafruit_ADS1x15/ads1x15_ex_singleended.py"
 READ_VAC_VOLTS_CMD = "/home/pi/vac/original/gpio/Adafruit-Raspberry-Pi-Python-Code/Adafruit_ADS1x15/ads1x15_ex_singleended.py"
@@ -53,8 +53,7 @@ def my_quit (channel) :
 
     time_now = time.time()
     if ((time_now - time_stamp) >= 1) :
-        print ("Hit shutdown button: ${0}", channel)
-        turn_off_vacuum ()
+        print ("Hit QUIT button: ${0}", channel)
         keep_vacuum = False
     time_stamp = time_now
 
@@ -73,10 +72,6 @@ def enableButton () :
     print ("Enable shutdown button. GPIO = ${0}", GPIO_SHUTDOWN)
     #print ("Enable quit button. GPIO = ${0}", GPIO_QUIT)
 
-    GPIO.setwarnings ( False )
-    GPIO.setmode ( GPIO.BOARD )
-    GPIO.setup ( GPIO_QUIT, GPIO.IN, pull_up_down=GPIO.PUD_UP )
-    GPIO.setup ( GPIO_SHUTDOWN, GPIO.IN, pull_up_down=GPIO.PUD_UP )
 
     #GPIO.add_event_detect( gpio_shutdown, GPIO.FALLING, callback=turn_off_vacuum)
 
@@ -124,7 +119,7 @@ def get_vac_volts () :
     vac_volts = float(p1.communicate()[0])
     psi = round( vac_volts_to_psi(vac_volts), 2)
     psi = abs(psi)
-    print "Vacuum PSI: ", psi, "Volts: ", round( vac_volts, 2)
+    print "Vacuum pressure: (", round( vac_volts, 2), " volts), ", psi, " PSI"
     showPSI(psi)
 
 # END get_vac_volts ()
@@ -141,8 +136,11 @@ def set_gpio_defaults () :
 
     GPIO.setmode ( GPIO.BOARD )  ## Use BOARD pin numbering
 
-    GPIO.setup ( GPIO_VAC_SOLENOID,   GPIO.OUT ) ## Setup GPIO pin vac valve to OUT
-    GPIO.setup ( GPIO_PRESSURE_VALVE, GPIO.OUT ) ## Setup GPIO pin pressure valve to OUT
+    GPIO.setup ( GPIO_VAC_SOLENOID,   GPIO.OUT, initial=GPIO.LOW ) ## Setup GPIO pin vac valve to OUT
+    GPIO.setup ( GPIO_PRESSURE_VALVE, GPIO.OUT, initial=GPIO.LOW) ## Setup GPIO pin pressure valve to OUT
+
+    GPIO.setup ( GPIO_QUIT, GPIO.IN, pull_up_down=GPIO.PUD_UP )
+    GPIO.setup ( GPIO_SHUTDOWN, GPIO.IN, pull_up_down=GPIO.PUD_UP )
 
     vac_on = 1 
 
@@ -160,6 +158,7 @@ def set_gpio_defaults_and_exit () :
     set_gpio_defaults ()
 
     turn_off_vacuum ()
+
 
     GPIO.cleanup ()
 
@@ -181,14 +180,14 @@ def turn_on_vacuum ():
     print "DEBUG: turn vacuum on"
 
     # open pressure valve which turns on venturi.
-    GPIO.output ( GPIO_PRESSURE_VALVE, True ) 
+    GPIO.output ( GPIO_PRESSURE_VALVE, GPIO.HIGH ) 
 
     # pause one second for vacuum to build before opening path to
     # vacuum bag.
     time.sleep ( valve_delay_open_sec )
 
     # Open valve to vacuum bag.
-    GPIO.output ( GPIO_VAC_SOLENOID, True ) 
+    GPIO.output ( GPIO_VAC_SOLENOID, GPIO.HIGH ) 
 	
 # END turn_on_vacuum ()
 
@@ -209,14 +208,14 @@ def turn_off_vacuum ():
     print "DEBUG: turn vacuum off"
 
     # Close valve to isolate vacuum in vacuum bag.
-    GPIO.output ( GPIO_VAC_SOLENOID,  False )
+    GPIO.output ( GPIO_VAC_SOLENOID,  GPIO.LOW )
 
     # pause to allow valve to vacuum bag to completely close before turning
     # off venturi.
     time.sleep ( valve_delay_close_sec )
 
     # Close pressure valve which turns off venturi to save air.
-    GPIO.output ( GPIO_PRESSURE_VALVE, False ) 
+    GPIO.output ( GPIO_PRESSURE_VALVE, GPIO.LOW ) 
 	
 # END turn_off_vacuum ()
 
@@ -300,8 +299,6 @@ def regulate_vacuum_sense ():
     global vac_on
     global keep_vacuum
 
-    set_gpio_defaults ()
-
     get_vac_volts ()
 	
     print "Regulating vacuum: psi = ", vac_volts_to_psi (vac_volts), ", volts = ", vac_volts
@@ -322,8 +319,6 @@ def regulate_vacuum_sense ():
         # Sleep one second then loop
         time.sleep ( VAC_SENSE_POLL_FREQ_SEC ) 
 		
-    set_gpio_defaults_and_exit ()
-
 # END regulate_vacuum_sense ()
 
 
@@ -397,7 +392,10 @@ def regulate_vacuum_time ():
 # Invoke main program        
 #
 time_stamp = time.time()
+set_gpio_defaults ()
+
 enableButton()
+
 segment = SevenSegment.SevenSegment(address=0x70)
 
 # Initialize the display. Must be called once before using the display.
@@ -405,4 +403,5 @@ segment.begin()
 
 regulate_vacuum_sense ()
 #regulate_vacuum_time ()
-#set_gpio_defaults_and_exit ()
+
+set_gpio_defaults_and_exit ()
