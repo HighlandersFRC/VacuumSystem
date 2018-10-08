@@ -39,15 +39,27 @@ MY_SMTP_PASS = 'em'
 GPIO_VAC_SOLENOID   = 11  # GREEN
 GPIO_PRESSURE_VALVE = 7 # GREY 
 GPIO_QUIT = 18 
-GPIO_SHUTDOWN = 16 
+
+# Global switches to enable usage of i2c devices.
+use_i2c_display = True
+use_i2c_vac_sensor = False
+
+# Global variable holding handle to 7-Segment Display
+seven_segment_display = 0
+
+# Global flag to indicate when GPIOs have been initialized to prevent access before initialization.
+gpio_initialized = False
 
 keep_vacuum = True
 
 fon = False
 
 
+#####################################
+#
 # My callback for GPIO button press
-def my_quit (channel) :
+#
+def quitGpioCallback (channel) :
     global keep_vacuum
     global time_stamp
 
@@ -57,52 +69,56 @@ def my_quit (channel) :
         keep_vacuum = False
     time_stamp = time_now
 
-# My callback for GPIO button press
-def my_shutdown (channel) :
-    global time_stamp
-    time_now = time.time()
-    if ((time_now - time_stamp) >= 1) :
-        print ("Hit shutdown button: ${0}", channel)
-        os.system("sudo shutdown -h now")
-        #os.system("ls -l")
-    time_stamp = time_now
-
-# Set up gpio for button
-def enableButton () :
-    print ("Enable shutdown button. GPIO = ${0}", GPIO_SHUTDOWN)
-    #print ("Enable quit button. GPIO = ${0}", GPIO_QUIT)
+# END quitGpioCallback ()
 
 
-    #GPIO.add_event_detect( gpio_shutdown, GPIO.FALLING, callback=turn_off_vacuum)
+################################
+#
+# Initialize for using 7-segment display
+#
+def enableSevenSegmentDisplay() :
+    global use_i2c_display
+    global seven_segment_display
 
-    GPIO.add_event_detect( GPIO_SHUTDOWN, GPIO.FALLING, callback=my_shutdown)
-    GPIO.add_event_detect( GPIO_QUIT, GPIO.FALLING, callback=my_quit)
+    if use_i2c_display:
+        seven_segment_display = SevenSegment.SevenSegment(address=0x70)
+        # Initialize the display. Must be called once before using the display.
+        seven_segment_display.begin()
 
+# END enableSevenSegmentDisplay ()
+
+
+################################
+#
+# Display vacuum pressure on 7-Segment Display and to console
+#
 def showPSI(psi):
-    global segment
+    global seven_segment_display
     global fon
-    segment.clear()
+    global use_i2c_display
 
-    # Set hours
-    #segment.set_digit(0, int(psi / 10))
-    #segment.set_digit(0, 2)     # Tens
-    #segment.set_digit(0, psi%10)     # Tens
+    if use_i2c_display:
+        seven_segment_display.clear()
 
-    segment.set_digit(0, int(psi/10)) 
-    segment.set_digit(1, int(psi % 10))
+        # Set PSI 
+        seven_segment_display.set_digit(0, int(psi/10)) 
+        seven_segment_display.set_digit(1, int(psi % 10))
 
-    # Toggle colon
-    if (fon):
-        fon = False
-        #segment.set_colon(0)              # Toggle colon at 1Hz
-    else:
-        fon = True
-        #segment.set_colon(1)              # Toggle colon at 1Hz
-
-    # Write the display buffer to the hardware.  This must be called to
-    # update the actual display LEDs.
-    segment.write_display()
+        # Toggle colon
+        if (fon):
+            fon = False
+            #seven_segment_display.set_colon(0)              # Toggle colon at 1Hz
+        else:
+            fon = True
+            #seven_segment_display.set_colon(1)              # Toggle colon at 1Hz
     
+        # Write the display buffer to the hardware.  This must be called to
+        # update the actual display LEDs.
+        seven_segment_display.write_display()
+    else:
+        print "Vacuum pressure: (", round( vac_volts, 2), " volts), ", psi, " PSI"
+
+# END showPSI ()
 
 
 ############################################################################
@@ -112,14 +128,18 @@ def showPSI(psi):
 def get_vac_volts () :
 
     global vac_volts
-	
-    p1 = Popen([READ_VAC_VOLTS_CMD], stdout=subprocess.PIPE)
-	
-    # Read standard out from process [0]. Stderr is [1].
-    vac_volts = float(p1.communicate()[0])
+    global use_i2c_vac_sensor
+
+    if use_i2c_vac_sensor:
+        # Read standard out from process [0]. Stderr is [1].
+        p1 = Popen([READ_VAC_VOLTS_CMD], stdout=subprocess.PIPE)
+        vac_volts = float(p1.communicate()[0]) 
+    else:
+        # Set artificial value for vac_volts
+        vac_volts = 0.1 
+
     psi = round( vac_volts_to_psi(vac_volts), 2)
     psi = abs(psi)
-    print "Vacuum pressure: (", round( vac_volts, 2), " volts), ", psi, " PSI"
     showPSI(psi)
 
 # END get_vac_volts ()
@@ -130,17 +150,16 @@ def get_vac_volts () :
 # Initialize GPIO pins
 #
 def set_gpio_defaults () :
-
+    global gpio_initialized
 
     GPIO.setwarnings ( False )
-
     GPIO.setmode ( GPIO.BOARD )  ## Use BOARD pin numbering
 
     GPIO.setup ( GPIO_VAC_SOLENOID,   GPIO.OUT, initial=GPIO.LOW ) ## Setup GPIO pin vac valve to OUT
     GPIO.setup ( GPIO_PRESSURE_VALVE, GPIO.OUT, initial=GPIO.LOW) ## Setup GPIO pin pressure valve to OUT
-
     GPIO.setup ( GPIO_QUIT, GPIO.IN, pull_up_down=GPIO.PUD_UP )
-    GPIO.setup ( GPIO_SHUTDOWN, GPIO.IN, pull_up_down=GPIO.PUD_UP )
+
+    gpio_initialized = True
 
     vac_on = 1 
 
@@ -154,15 +173,27 @@ def set_gpio_defaults () :
 # Clean shutdown GPIOs
 #
 def set_gpio_defaults_and_exit () :
-
-    set_gpio_defaults ()
-
     turn_off_vacuum ()
-
-
+    set_gpio_defaults ()
     GPIO.cleanup ()
 
 # END set_gpio_defaults_and_exit ()
+
+
+################################
+#
+# Set up gpio for external push buttons
+#
+def enableButton () :
+    global gpio_initialized
+
+    if gpio_initialized:
+        print ("Enable quit button. GPIO = ${0}", GPIO_QUIT)
+        GPIO.add_event_detect( GPIO_QUIT, GPIO.FALLING, callback=quitGpioCallback)
+    else:
+        print ("ERROR: enableButton(): Called before GPIO system initialized")
+
+# END enableButton ()
 
 
 ############################################################################
@@ -173,6 +204,7 @@ def set_gpio_defaults_and_exit () :
 #
 def turn_on_vacuum ():
 
+    global gpio_initialized
     global vac_on
 
     vac_on = 1
@@ -180,14 +212,17 @@ def turn_on_vacuum ():
     print "DEBUG: turn vacuum on"
 
     # open pressure valve which turns on venturi.
-    GPIO.output ( GPIO_PRESSURE_VALVE, GPIO.HIGH ) 
+
+    if gpio_initialized:
+        GPIO.output ( GPIO_PRESSURE_VALVE, GPIO.HIGH ) 
 
     # pause one second for vacuum to build before opening path to
     # vacuum bag.
     time.sleep ( valve_delay_open_sec )
 
     # Open valve to vacuum bag.
-    GPIO.output ( GPIO_VAC_SOLENOID, GPIO.HIGH ) 
+    if gpio_initialized:
+        GPIO.output ( GPIO_VAC_SOLENOID, GPIO.HIGH ) 
 	
 # END turn_on_vacuum ()
 
@@ -201,6 +236,7 @@ def turn_on_vacuum ():
 #
 def turn_off_vacuum ():
 
+    global gpio_initialized
     global vac_on
 
     vac_on = 0
@@ -208,14 +244,16 @@ def turn_off_vacuum ():
     print "DEBUG: turn vacuum off"
 
     # Close valve to isolate vacuum in vacuum bag.
-    GPIO.output ( GPIO_VAC_SOLENOID,  GPIO.LOW )
+    if gpio_initialized:
+        GPIO.output ( GPIO_VAC_SOLENOID,  GPIO.LOW )
 
     # pause to allow valve to vacuum bag to completely close before turning
     # off venturi.
     time.sleep ( valve_delay_close_sec )
 
     # Close pressure valve which turns off venturi to save air.
-    GPIO.output ( GPIO_PRESSURE_VALVE, GPIO.LOW ) 
+    if gpio_initialized:
+        GPIO.output ( GPIO_PRESSURE_VALVE, GPIO.LOW ) 
 	
 # END turn_off_vacuum ()
 
@@ -394,12 +432,11 @@ def regulate_vacuum_time ():
 time_stamp = time.time()
 set_gpio_defaults ()
 
+# Enable buttons by configuring GPIOs
 enableButton()
 
-segment = SevenSegment.SevenSegment(address=0x70)
-
-# Initialize the display. Must be called once before using the display.
-segment.begin()
+# Enable 7-Segment Display
+enableSevenSegmentDisplay()
 
 regulate_vacuum_sense ()
 #regulate_vacuum_time ()
